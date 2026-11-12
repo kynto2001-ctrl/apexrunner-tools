@@ -127,3 +127,34 @@ def test_every_signature_is_charged_not_every_call(account):
 def test_spend_budget_rejects_negative():
     with pytest.raises(ValueError):
         SpendBudget(-0.01)
+
+
+def test_budget_is_atomic_under_heavy_contention():
+    """Many threads racing on try_spend must never overshoot the limit.
+
+    Honest limit of this test: on GIL builds of CPython (3.11/3.12) the
+    unlocked read-modify-write cannot actually interleave, so removing the
+    lock does NOT make this fail there (mutation-tested 2026-11-12). The lock
+    exists for free-threaded builds (3.13t+), where this test is meaningful.
+    """
+    import sys
+
+    budget = SpendBudget(0.05)  # 50_000 atomic units
+    granted = [0] * 32
+    old = sys.getswitchinterval()
+    sys.setswitchinterval(1e-6)
+    try:
+        def worker(i):
+            for _ in range(5_000):
+                if budget.try_spend(1):
+                    granted[i] += 1
+
+        threads = [threading.Thread(target=worker, args=(i,)) for i in range(32)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+    finally:
+        sys.setswitchinterval(old)
+    assert sum(granted) == 50_000
+    assert budget.spent_usdc == pytest.approx(0.05)

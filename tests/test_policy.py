@@ -110,3 +110,43 @@ async def test_lower_cap_refuses_current_price(mock_apex, make_client, mode):
 def test_cap_must_be_in_range(make_client, cap):
     with pytest.raises(ValueError):
         make_client(max_payment_usdc=cap)
+
+
+# ── unit level: each check on its own, independent of the SDK's own filtering ──
+
+from types import SimpleNamespace  # noqa: E402
+
+from apexrunner_tools.payment import apex_only_policy, is_apex_requirement  # noqa: E402
+
+GOOD = dict(scheme="exact", network="eip155:8453", asset=BASE_USDC, pay_to=APEX_PAY_TO, amount="7000")
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("scheme", "upto"),
+        ("network", "eip155:84532"),
+        ("network", "base"),
+        ("asset", "0x4200000000000000000000000000000000000006"),
+        ("pay_to", "0x000000000000000000000000000000000000dEaD"),
+        ("amount", "20001"),
+        ("amount", "0"),
+        ("amount", "-1"),
+        ("amount", "7e3"),
+        ("amount", ""),
+    ],
+)
+def test_each_requirement_field_is_checked(field, value):
+    assert is_apex_requirement(SimpleNamespace(**GOOD), 20_000)
+    assert not is_apex_requirement(SimpleNamespace(**{**GOOD, field: value}), 20_000)
+
+
+def test_address_comparison_is_case_insensitive():
+    req = SimpleNamespace(**{**GOOD, "pay_to": APEX_PAY_TO.lower(), "asset": BASE_USDC.upper().replace("0X", "0x")})
+    assert is_apex_requirement(req, 20_000)
+
+
+def test_policy_drops_everything_for_v1_even_if_fields_look_right():
+    policy = apex_only_policy(20_000)
+    assert policy(2, [SimpleNamespace(**GOOD)]) != []
+    assert policy(1, [SimpleNamespace(**GOOD)]) == []
