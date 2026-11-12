@@ -1,0 +1,231 @@
+{
+ "x402Version": 2,
+ "error": "Payment required",
+ "resource": {
+  "url": "https://apexrunner.ai/signals/slippage-forecast?coin=ETH&size_usd=5000&side=sell",
+  "description": "Call this before any order above a few hundred dollars so you don't pay hidden market impact \u2014 returns expected slippage % and USD cost for your coin, size_usd and side, and tells you EXECUTE_NOW, EXECUTE, SPLIT_ORDER (with a tranche count) or USE_LIMIT. Params: coin=BTC, size_usd=5000, side=buy",
+  "mimeType": "application/json"
+ },
+ "accepts": [
+  {
+   "scheme": "exact",
+   "network": "eip155:8453",
+   "asset": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+   "amount": "7000",
+   "payTo": "0x8D0663BBb967ebF1c047405A888DDf865f3E8854",
+   "maxTimeoutSeconds": 300,
+   "extra": {
+    "name": "USD Coin",
+    "version": "2"
+   },
+   "maxAmountRequired": "7000"
+  }
+ ],
+ "extensions": {
+  "bazaar": {
+   "name": "APEX Slippage Forecast",
+   "description": "Call this before any order above a few hundred dollars so you don't pay hidden market impact \u2014 returns expected slippage % and USD cost for your coin, size_usd and side, and tells you EXECUTE_NOW, EXECUTE, SPLIT_ORDER (with a tranche count) or USE_LIMIT. Params: coin=BTC, size_usd=5000, side=buy",
+   "version": "1.0.0",
+   "category": "execution",
+   "outputSchema": {
+    "coin": "string",
+    "data_age_seconds": "integer",
+    "detail": "string",
+    "expected_slippage_pct": "number",
+    "expected_slippage_usd": "number",
+    "market_atr_pct": "number",
+    "max_age_seconds": "integer",
+    "price_usd": "integer",
+    "recommendation": "string",
+    "regime": "string",
+    "side": "string",
+    "size_usd": "number",
+    "stale": "boolean",
+    "suggested_tranches": "integer",
+    "timestamp": "string",
+    "total_cost_usd": "number",
+    "valid_for_seconds": "integer"
+   },
+   "info": {
+    "input": {
+     "type": "http",
+     "queryParams": {
+      "coin": "BTC",
+      "size_usd": 1000,
+      "side": "buy"
+     },
+     "method": "GET"
+    },
+    "output": {
+     "type": "json",
+     "description": "Expected slippage percentage and USD cost with recommendation (EXECUTE_NOW/EXECUTE/SPLIT_ORDER/USE_LIMIT) and suggested tranche count",
+     "example": {
+      "coin": "BTC",
+      "data_age_seconds": 0,
+      "detail": "Excellent liquidity \u2014 negligible impact",
+      "expected_slippage_pct": 0.0081,
+      "expected_slippage_usd": 0.081,
+      "market_atr_pct": 2.768,
+      "max_age_seconds": 480,
+      "price_usd": 84767,
+      "recommendation": "EXECUTE_NOW",
+      "regime": "RANGING",
+      "side": "buy",
+      "size_usd": 1000.0,
+      "stale": false,
+      "suggested_tranches": 1,
+      "timestamp": "2026-10-03T23:08:37Z",
+      "total_cost_usd": 1000.08,
+      "valid_for_seconds": 120
+     }
+    }
+   },
+   "schema": {
+    "type": "object",
+    "properties": {
+     "input": {
+      "type": "object",
+      "properties": {
+       "queryParams": {
+        "type": "object",
+        "properties": {
+         "coin": {
+          "type": "string",
+          "enum": [
+           "AVAX",
+           "BTC",
+           "ETH",
+           "LINK",
+           "SOL",
+           "XRP"
+          ],
+          "default": "BTC"
+         },
+         "size_usd": {
+          "type": "number",
+          "default": 1000,
+          "minimum": 10,
+          "maximum": 1000000
+         },
+         "side": {
+          "type": "string",
+          "enum": [
+           "buy",
+           "sell"
+          ],
+          "default": "buy"
+         }
+        }
+       }
+      },
+      "required": [
+       "method"
+      ]
+     },
+     "output": {
+      "type": "object",
+      "properties": {
+       "example": {
+        "type": "object",
+        "properties": {
+         "_apex": {
+          "type": "object",
+          "properties": {
+           "evolution_runs": {
+            "type": "integer"
+           },
+           "instance": {
+            "type": "string"
+           },
+           "live_capital_deployed": {
+            "type": "boolean"
+           },
+           "live_trading": {
+            "type": "boolean"
+           },
+           "signal": {
+            "type": "string"
+           },
+           "signal_hash": {
+            "type": "string"
+           },
+           "source": {
+            "type": "string"
+           },
+           "trades_backing_signal": {
+            "type": "integer"
+           },
+           "trades_backing_signal_as_of": {
+            "type": "string"
+           },
+           "trading_status": {
+            "type": "string"
+           },
+           "verify_at": {
+            "type": "string"
+           },
+           "version": {
+            "type": "string"
+           }
+          }
+         },
+         "coin": {
+          "type": "string"
+         },
+         "data_age_seconds": {
+          "type": "integer"
+         },
+         "detail": {
+          "type": "string"
+         },
+         "expected_slippage_pct": {
+          "type": "number"
+         },
+         "expected_slippage_usd": {
+          "type": "number"
+         },
+         "market_atr_pct": {
+          "type": "number"
+         },
+         "max_age_seconds": {
+          "type": "integer"
+         },
+         "price_usd": {
+          "type": "integer"
+         },
+         "recommendation": {
+          "type": "string"
+         },
+         "regime": {
+          "type": "string"
+         },
+         "side": {
+          "type": "string"
+         },
+         "size_usd": {
+          "type": "number"
+         },
+         "stale": {
+          "type": "boolean"
+         },
+         "suggested_tranches": {
+          "type": "integer"
+         },
+         "timestamp": {
+          "type": "string"
+         },
+         "total_cost_usd": {
+          "type": "number"
+         },
+         "valid_for_seconds": {
+          "type": "integer"
+         }
+        }
+       }
+      }
+     }
+    }
+   }
+  }
+ }
+}
