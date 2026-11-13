@@ -90,23 +90,40 @@ jobs:
           skip-existing: true
 
   verify-testpypi:
+    # TestPyPI is NOT trusted for anything but our own wheel: anyone can upload
+    # any name there (on 2026-11-13 a planted `jmespath 99.99.99` sdist with an
+    # install-time beacon was pulled in when TestPyPI was used as a dependency
+    # index). So: fetch only our wheel, never build anything from TestPyPI,
+    # prove it is byte-identical to what this run built, and resolve every
+    # dependency from real PyPI.
     needs: [build, publish-testpypi]
     runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ needs.build.outputs.version }}
     steps:
       - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
         with:
           python-version: "3.12"
-      - name: Install the TestPyPI release and import it
-        env:
-          VERSION: ${{ needs.build.outputs.version }}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: dist
+          path: built/
+      - name: Fetch our wheel from TestPyPI (no dependencies, binary only)
         run: |
-          # TestPyPI serves only our package; dependencies come from real PyPI.
           for i in 1 2 3 4 5 6 7 8 9 10; do
-            pip install --no-cache-dir --index-url https://test.pypi.org/simple/ \
-              --extra-index-url https://pypi.org/simple/ \
-              "apexrunner-tools[langchain,crewai]==${VERSION}" && break
+            pip download --no-deps --no-cache-dir --only-binary=:all: \
+              --index-url https://test.pypi.org/simple/ \
+              "apexrunner-tools==${VERSION}" -d fetched/ && break
             echo "not visible yet, retry $i"; sleep 30
           done
+          ls fetched/apexrunner_tools-${VERSION}-py3-none-any.whl
+      - name: TestPyPI serves exactly the wheel this run built
+        run: |
+          sha256sum built/*.whl fetched/*.whl
+          cmp "built/apexrunner_tools-${VERSION}-py3-none-any.whl" "fetched/apexrunner_tools-${VERSION}-py3-none-any.whl"
+      - name: Install it with dependencies from PyPI only, and import it
+        run: |
+          pip install --no-cache-dir "fetched/apexrunner_tools-${VERSION}-py3-none-any.whl[langchain,crewai]"
           python - <<'PY'
           import os, apexrunner_tools as a
           from apexrunner_tools.langchain import get_apex_tools as lc

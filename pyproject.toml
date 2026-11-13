@@ -47,4 +47,4 @@ asyncio_default_fixture_loop_scope = "function"
 
 [tool.hatch.build.targets.sdist]
 # scripts/ holds APEX-internal ops tooling (live paid test, seed wallet address, key path).
-exclude = ["scripts/", ".venv/", "dist/"]
+exclude = ["scripts/", ".github/", ".venv/", "dist/"]
