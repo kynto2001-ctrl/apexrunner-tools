@@ -50,7 +50,7 @@ class ApexTool(BaseTool):
 
 
 def get_apex_tools(client: ApexClient | None = None, **client_kwargs: Any) -> list[ApexTool]:
-    """The three APEX tools sharing one client (one wallet, one budget, one cache).
+    """The four APEX tools sharing one client (one wallet, one budget, one cache).
 
     Pass an existing ``client``, or the ApexClient arguments (``private_key=...``,
     ``budget_usdc=...``, ...) to create one.

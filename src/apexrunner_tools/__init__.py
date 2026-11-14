@@ -13,7 +13,9 @@ from .errors import (
     BudgetExceeded,
     PaymentRefused,
     PaymentRejected,
+    TradeBlocked,
 )
+from .shield import RiskShield, ShieldDecision, apex_shield
 from .signals import SIGNALS, SignalSpec
 
 __all__ = [
@@ -25,6 +27,10 @@ __all__ = [
     "BudgetExceeded",
     "PaymentRefused",
     "PaymentRejected",
+    "RiskShield",
+    "ShieldDecision",
+    "TradeBlocked",
+    "apex_shield",
     "SIGNALS",
     "SignalSpec",
     "__version__",

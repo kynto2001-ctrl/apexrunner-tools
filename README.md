@@ -1,14 +1,15 @@
 # apexrunner-tools
 
-Pre-trade crypto signals for **LangChain** and **CrewAI** agents. Each call is paid per use over [x402](https://x402.org) from the agent's own wallet: about $0.01 in USDC on Base mainnet. There is no API key, no account and no subscription.
+Pre-trade crypto signals for **LangChain** and **CrewAI** agents, plus **RiskShield**, a pre-trade gate that blocks high-risk trades in code before they reach your exchange. Each call is paid per use over [x402](https://x402.org) from the agent's own wallet: about $0.01 in USDC on Base mainnet ($0.014 for `check_trade_safety`). There is no API key, no account and no subscription.
 
 | Tool | Input | Returns |
 |---|---|---|
 | `risk_assessment_bundle` | none | 4 signals in one call: liquidation cascade risk, nearest liquidation clusters, market heat, top-trader positioning |
 | `execution_window_optimizer` | `coin` | 0–100 window score and a verdict: EXECUTE_NOW / GOOD_WINDOW / WAIT_15MIN / WAIT_SESSION, plus an order type |
 | `slippage_forecast` | `coin`, `size_usd`, `side` | Expected slippage % and USD, and a recommendation: EXECUTE_NOW / EXECUTE / SPLIT_ORDER / USE_LIMIT |
+| `check_trade_safety` | `coin`, `side`, `size_usd` (all required) | 0–100 safety score for one specific trade and a verdict: LOW_RISK (65+) / CAUTION (40–64) / DANGER (<40), with the reason for each factor |
 
-Coins: BTC, ETH, SOL, AVAX, LINK, XRP.
+Coins: BTC, ETH, SOL, AVAX, LINK, XRP. `check_trade_safety` covers BTC, ETH and SOL, `long`/`short` (`buy`/`sell` accepted), $10 to $10,000,000.
 
 ## Install
 
@@ -57,6 +58,53 @@ with ApexClient(private_key=os.environ["AGENT_WALLET_KEY"]) as apex:
 
 `acall()` is the async version.
 
+## RiskShield: block dangerous trades before they execute
+
+A prompt can tell an agent to check risk first. RiskShield makes it impossible to skip: it wraps the function that places the order, so every trade is scored by `check_trade_safety` before it runs, and a trade in the DANGER band never reaches your exchange code.
+
+```python
+import os
+from apexrunner_tools import ApexClient, RiskShield, TradeBlocked
+
+shield = RiskShield(ApexClient(private_key=os.environ["AGENT_WALLET_KEY"]))
+
+@shield.protect
+def place_order(coin: str, side: str, size_usd: float) -> dict:
+    return exchange.market_order(coin, side, size_usd)   # your code, unchanged
+
+try:
+    place_order("ETH", "long", 5000)
+except TradeBlocked as e:
+    print(e)              # BLOCKED: long ETH $5,000 scored 31/100 (DANGER; blocks under 40). ...
+    e.decision.reasons    # one line per factor, highest risk first
+```
+
+| Option | Default | Effect |
+|---|---|---|
+| `block_below` | `40` | Block when the score is below this. 40 blocks DANGER only; `65` also blocks CAUTION. A DANGER verdict always blocks. |
+| `fail_open` | `False` | If the check can't be completed (APEX unavailable, budget spent, unsupported coin, unreadable response), the trade is **blocked**. Set `True` to let it through instead; the decision still records why. |
+| `on_decision` | `None` | Callback that receives every `ShieldDecision` (score, verdict, reasons, error, receipt). Use it to log or alert. |
+
+Your function's own `coin`, `side` and `size_usd` arguments are used. If they're named differently, map them with `@shield.protect(params={"coin": "symbol", "side": "direction", "size_usd": "notional"})`. For an order object, use `@shield.protect(extract=lambda order: (order.coin, order.side, order.usd))`. Async functions work the same way. To score without wrapping, call `shield.check(coin, side, size_usd)`, which returns a `ShieldDecision` and never raises, or `shield.guard(...)`, which raises `TradeBlocked`. For one-off use, `@apex_shield(private_key=...)` creates the client and the shield in one line.
+
+**Cost:** one check is $0.014. An identical check (same coin, side and size) within the response's validity window (120 s) is served from cache at no cost. The default $1.00 client budget covers about 70 checks. When it is spent, trades are blocked (fail closed) until you raise the budget.
+
+**In an agent:** let the LLM decide what to trade, and put the shield on the tool that executes. `TradeBlocked` is not an `ApexError` and is not caught by the tools' error handling, so catch it in your order tool and return `str(e)` to the model. The message explains why, and the agent can resize, flip or skip:
+
+```python
+from langchain_core.tools import tool
+
+@tool
+def execute_trade(coin: str, side: str, size_usd: float) -> str:
+    """Place a market order. It is risk-checked first and may be refused."""
+    try:
+        return str(place_order(coin, side, size_usd))
+    except TradeBlocked as e:
+        return str(e)
+```
+
+**What the score is, and isn't:** a heuristic computed from live market structure: Hyperliquid liquidation clusters near the mark price, top-trader crowding on your side, funding paid by your side, and modelled slippage for your size. The weights are not yet calibrated against outcomes (`method.calibrated: false` in every response). A trade that passes is not "safe", and none of this is investment advice. RiskShield is a guard against walking into obvious structural risk, not a strategy.
+
 ## Wallet
 
 Supply exactly one of these:
@@ -87,6 +135,8 @@ All errors subclass `ApexError`:
 | `PaymentRejected` | A payment was signed but refused, usually too little USDC | No settlement |
 | `ApexUnavailable` | The server returned a non-2xx status | x402 settles only on success |
 | `ApexResponseError` | The server returned a 2xx with an unreadable body | Possibly; report it |
+
+`TradeBlocked` (RiskShield) is separate and is **not** an `ApexError`: the API worked, and the trade was refused. `e.decision` holds the full `ShieldDecision`.
 
 LangChain turns these into a tool message the model can read. CrewAI tools return `{"success": false, "error": ...}`.
 

@@ -9,7 +9,7 @@ from apexrunner_tools import ApexClient
 from apexrunner_tools.crewai import get_apex_tools as crew_tools
 from apexrunner_tools.langchain import get_apex_tools as lc_tools
 
-NAMES = ["risk_assessment_bundle", "execution_window_optimizer", "slippage_forecast"]
+NAMES = ["risk_assessment_bundle", "execution_window_optimizer", "slippage_forecast", "check_trade_safety"]
 
 
 def _tool_call(name, args):
@@ -27,6 +27,11 @@ def test_langchain_tools_and_schemas(make_client):
     assert slip["coin"]["enum"] == ["BTC", "ETH", "SOL", "AVAX", "LINK", "XRP"]
     assert slip["side"]["enum"] == ["buy", "sell"]
     assert tools[0].tool_call_schema.model_json_schema().get("properties", {}) == {}
+    cts = tools[3].tool_call_schema.model_json_schema()
+    assert cts["properties"]["coin"]["enum"] == ["BTC", "ETH", "SOL"]
+    assert cts["properties"]["side"]["enum"] == ["long", "short"]
+    assert cts["properties"]["size_usd"]["maximum"] == 10_000_000
+    assert set(cts["required"]) == {"coin", "side", "size_usd"}  # no defaults: the agent must state the trade
     assert all("USDC on Base" in t.description for t in tools)
 
 

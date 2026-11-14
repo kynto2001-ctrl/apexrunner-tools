@@ -29,3 +29,15 @@ class ApexUnavailable(ApexError):
 
 class ApexResponseError(ApexError):
     """APEX returned a success status with a body that is not a JSON object."""
+
+
+class TradeBlocked(Exception):
+    """RiskShield refused a trade. Deliberately NOT an ApexError: the API worked,
+    the trade was judged too risky (or could not be checked, when failing closed).
+
+    ``decision`` holds the full ShieldDecision. ``str(exc)`` is written so an LLM
+    agent can read it and decide what to do next."""
+
+    def __init__(self, decision: object):
+        super().__init__(getattr(decision, "message", "Trade blocked by RiskShield."))
+        self.decision = decision

@@ -1,4 +1,4 @@
-"""The three tools, defined once. Both framework adapters read from here."""
+"""The four tools, defined once. Both framework adapters read from here."""
 
 from __future__ import annotations
 
@@ -6,7 +6,12 @@ from dataclasses import dataclass
 
 from pydantic import BaseModel
 
-from .schemas import ExecutionWindowOptimizerInput, RiskAssessmentBundleInput, SlippageForecastInput
+from .schemas import (
+    CheckTradeSafetyInput,
+    ExecutionWindowOptimizerInput,
+    RiskAssessmentBundleInput,
+    SlippageForecastInput,
+)
 
 _COST = (
     "Costs about $0.01 in USDC on Base, paid automatically from the agent's wallet. "
@@ -69,7 +74,28 @@ SLIPPAGE_FORECAST = SignalSpec(
     ),
 )
 
-SIGNALS: tuple[SignalSpec, ...] = (RISK_ASSESSMENT_BUNDLE, EXECUTION_WINDOW_OPTIMIZER, SLIPPAGE_FORECAST)
+CHECK_TRADE_SAFETY = SignalSpec(
+    name="check_trade_safety",
+    slug="check-trade-safety",
+    input_model=CheckTradeSafetyInput,
+    description=(
+        "Pre-trade risk check for one specific trade. Scores a proposed coin, side and size 0-100 "
+        "(higher = lower risk) from Hyperliquid liquidation clusters, top-trader crowding, funding "
+        "and modelled slippage, and returns a verdict: LOW_RISK (65+), CAUTION (40-64) or DANGER "
+        "(under 40), with the reason for each factor. The score is a heuristic, not a prediction "
+        "or a guarantee. Inputs: coin (BTC, ETH or SOL), side (long or short), size_usd "
+        "(10 to 10,000,000). Example: coin=ETH, side=long, size_usd=5000. Costs about $0.014 in "
+        "USDC on Base, paid automatically from the agent's wallet; repeating the same check while "
+        "it is still fresh returns the cached result at no cost."
+    ),
+)
+
+SIGNALS: tuple[SignalSpec, ...] = (
+    RISK_ASSESSMENT_BUNDLE,
+    EXECUTION_WINDOW_OPTIMIZER,
+    SLIPPAGE_FORECAST,
+    CHECK_TRADE_SAFETY,
+)
 
 _BY_KEY = {key: spec for spec in SIGNALS for key in (spec.name, spec.slug)}
 

@@ -58,7 +58,7 @@ def _failure(signal: str, exc: ApexError) -> str:
 
 
 def get_apex_tools(client: ApexClient | None = None, **client_kwargs: Any) -> list[ApexCrewTool]:
-    """The three APEX tools sharing one client (one wallet, one budget, one cache)."""
+    """The four APEX tools sharing one client (one wallet, one budget, one cache)."""
     if client is None:
         client = ApexClient(**client_kwargs)
     elif client_kwargs:
