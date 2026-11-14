@@ -131,7 +131,9 @@ jobs:
           assert a.__version__ == os.environ["VERSION"], a.__version__
           key = "0x" + "11" * 32  # throwaway; no request is made
           assert [t.name for t in lc(private_key=key)] == [s.name for s in a.SIGNALS]
-          assert len(crew(private_key=key)) == 3
+          assert [t.name for t in crew(private_key=key)] == [s.name for s in a.SIGNALS]
+          from apexrunner_tools.shield import RiskShield
+          assert a.RiskShield is RiskShield and "check_trade_safety" in [s.name for s in a.SIGNALS]
           print("TestPyPI", a.__version__, "OK")
           PY
 
