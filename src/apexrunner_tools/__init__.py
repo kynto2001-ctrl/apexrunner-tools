@@ -1,4 +1,5 @@
-"""APEX Runner pre-trade crypto signals for LangChain and CrewAI agents, paid per call over x402.
+"""APEX Runner pre-trade crypto signals for LangChain and CrewAI agents, paid per call over x402,
+plus RiskShield (``apexrunner_tools.shield``), a fail-closed pre-trade gate on check_trade_safety.
 
 Framework adapters live in ``apexrunner_tools.langchain`` and ``apexrunner_tools.crewai``
 so that importing the core never requires either framework.

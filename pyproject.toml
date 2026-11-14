@@ -4,14 +4,14 @@ build-backend = "hatchling.build"
 
 [project]
 name = "apexrunner-tools"
-version = "0.1.0"
-description = "LangChain and CrewAI tools for APEX Runner pre-trade crypto signals (risk, execution timing, slippage), paid per call over x402 in USDC on Base."
+version = "0.2.0"
+description = "LangChain and CrewAI tools for APEX Runner pre-trade crypto signals (risk, execution timing, slippage, trade safety) and RiskShield, a fail-closed pre-trade gate, paid per call over x402 in USDC on Base."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 authors = [{ name = "APEX Runner", email = "267811382+kynto2001-ctrl@users.noreply.github.com" }]
-keywords = ["x402", "langchain", "crewai", "crypto", "trading", "agents", "usdc", "base"]
+keywords = ["x402", "langchain", "crewai", "crypto", "trading", "agents", "usdc", "base", "risk-management"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
