@@ -17,6 +17,36 @@ Coins: BTC, ETH, SOL, AVAX, LINK, XRP. `check_trade_safety` covers BTC, ETH and 
 pip install "apexrunner-tools[langchain]"   # or [crewai]
 ```
 
+## Fund your agent's wallet (do this first)
+
+Every call is paid from the agent's own wallet. **With an empty wallet, nothing works, and RiskShield blocks every trade.** That is deliberate: it fails closed. The tool is not broken.
+
+1. **Create a wallet just for the agent.** Don't reuse a wallet that holds anything else:
+   ```bash
+   python -c "from eth_account import Account; a = Account.create(); print(a.address, a.key.hex())"
+   export AGENT_WALLET_KEY=<the key printed above>   # keep it out of git
+   ```
+2. **Send it USDC on Base mainnet.** It needs USDC (`0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913`) **on the Base network**, not Ethereum, Arbitrum or any other chain. When you withdraw from an exchange, choose *Base* as the network. You don't need any ETH because the facilitator pays the gas.
+3. **Check that it arrived:** `https://basescan.org/token/0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913?a=<your address>`
+
+**How much:** $1 is enough to start.
+
+| Call | Price | $1 covers |
+|---|---|---|
+| `check_trade_safety` (RiskShield) | $0.014 | about 70 checks |
+| other tools | about $0.01 | about 100 calls |
+
+You pay only for calls that succeed. A repeated identical call is served from cache at no cost while its data is still valid. The client also stops itself at `budget_usdc` (default $1.00), whatever the balance.
+
+**If the wallet is empty**, nothing is charged and no order is placed. RiskShield raises `TradeBlocked` with:
+
+```
+BLOCKED: long ETH $500 could not be risk-checked: PaymentRejected: Payment was rejected.
+Check that wallet 0x54586281dFbcdF3e496B0A8dd58d3512B603b0B1 holds USDC on Base mainnet (about $0.01 per call).
+```
+
+Here `e.decision.error` is set and `e.decision.score` is `None`. That combination means the check never ran. A real DANGER result has a score.
+
 ## LangChain
 
 ```python
@@ -87,7 +117,7 @@ except TradeBlocked as e:
 
 Your function's own `coin`, `side` and `size_usd` arguments are used. If they're named differently, map them with `@shield.protect(params={"coin": "symbol", "side": "direction", "size_usd": "notional"})`. For an order object, use `@shield.protect(extract=lambda order: (order.coin, order.side, order.usd))`. Async functions work the same way. To score without wrapping, call `shield.check(coin, side, size_usd)`, which returns a `ShieldDecision` and never raises, or `shield.guard(...)`, which raises `TradeBlocked`. For one-off use, `@apex_shield(private_key=...)` creates the client and the shield in one line.
 
-**Cost:** one check is $0.014. An identical check (same coin, side and size) within the response's validity window (120 s) is served from cache at no cost. The default $1.00 client budget covers about 70 checks. When it is spent, trades are blocked (fail closed) until you raise the budget.
+**Cost:** one check is $0.014. An identical check (same coin, side and size) within the response's validity window (120 s) is served from cache at no cost. The default $1.00 client budget covers about 70 checks. When it is spent, trades are blocked (fail closed) until you raise the budget. The wallet itself needs USDC on Base. If every trade is blocked with no score, see [Fund your agent's wallet](#fund-your-agents-wallet-do-this-first).
 
 **In an agent:** let the LLM decide what to trade, and put the shield on the tool that executes. `TradeBlocked` is not an `ApexError` and is not caught by the tools' error handling, so catch it in your order tool and return `str(e)` to the model. The message explains why, and the agent can resize, flip or skip:
 
@@ -123,6 +153,16 @@ The wallet needs **USDC on Base mainnet**, and no ETH. Payments are signed USDC 
 | **Per-call cap** | `max_payment_usdc`, default **$0.02** and never above $1.00. A higher price is refused before signing. |
 | **Spend budget** | `budget_usdc`, default **$1.00** per client. It is checked at the moment of signing, every signature counts (including the SDK's automatic re-sign on recovery), and it is safe across threads. When the budget is spent, calls raise `BudgetExceeded` and nothing is signed. A signed payment counts as spent even if the call then fails: the budget never assumes a payment was not settled. |
 | **Expiring cache** | Repeating an identical call while its data is still valid (the response's `valid_for_seconds` minus its age, at most 300 s) returns the cached result at no cost. Stale data is never cached. CrewAI's own cache has no expiry, so it is switched off for these tools. |
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Every trade `BLOCKED ... could not be risk-checked: PaymentRejected` | The wallet has no USDC on Base, or not enough | [Fund it](#fund-your-agents-wallet-do-this-first). Check the balance on basescan.org, not on the Ethereum explorer |
+| You sent USDC but it is still rejected | It went to a different chain (Ethereum, Arbitrum, …) | Send USDC to the same address, with *Base* as the network |
+| `BLOCKED ... could not be risk-checked: BudgetExceeded` | The client's own `budget_usdc` is spent, whatever the balance | Make a new client, or pass a larger `budget_usdc=` |
+| `BLOCKED ... could not be risk-checked: ...invalid or unsupported trade parameters` | Coin not BTC/ETH/SOL, or size outside $10–$10M | Change the trade. Other coins can't be checked, and are blocked unless `fail_open=True` |
+| `BLOCKED: ... scored 31/100 (DANGER ...)` | Working as intended: the check ran and the trade scored DANGER | Resize, flip or skip. `e.decision.reasons` says why |
 
 ## Errors
 
