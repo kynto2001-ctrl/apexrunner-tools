@@ -41,3 +41,12 @@ class TradeBlocked(Exception):
     def __init__(self, decision: object):
         super().__init__(getattr(decision, "message", "Trade blocked by RiskShield."))
         self.decision = decision
+
+
+class LocalLimitBlocked(TradeBlocked):
+    """A local risk limit (apex_risk.toml / APEX_* env) refused the trade before any paid
+    check ran. Subclasses TradeBlocked, so existing ``except TradeBlocked`` handlers catch it.
+
+    ``str(exc)`` starts with "Blocked by local risk limits". ``decision.limit`` names
+    the limit: max_trade_usd, max_24h_volume_usd, portfolio_stop_pct, or risk_state
+    when the state file could not be read (always blocks)."""
