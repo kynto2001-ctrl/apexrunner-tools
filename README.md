@@ -1,6 +1,29 @@
 # apexrunner-tools
 
-Pre-trade crypto signals for **LangChain** and **CrewAI** agents, plus **RiskShield**, a pre-trade gate that blocks high-risk trades in code before they reach your exchange. Each call is paid per use over [x402](https://x402.org) from the agent's own wallet: about $0.01 in USDC on Base mainnet ($0.014 for `check_trade_safety`). There is no API key, no account and no subscription.
+**RiskShield is a pre-trade gate that blocks your trading agent's riskiest orders, such as a long opened just above a wall of liquidations, before they reach the exchange.** Put one decorator on the function that places orders. Every trade is then scored 0–100 against live market structure before it runs, and a trade scored DANGER never reaches your exchange. It covers BTC, ETH and SOL. Each check costs $0.014 in USDC, paid per call over [x402](https://x402.org). There is no API key, no account and no subscription.
+
+```python
+import os
+from apexrunner_tools import ApexClient, RiskShield
+
+shield = RiskShield(ApexClient(private_key=os.environ["AGENT_WALLET_KEY"]))
+
+@shield.protect
+def place_order(coin: str, side: str, size_usd: float) -> dict:
+    return exchange.market_order(coin, side, size_usd)   # your code, unchanged
+
+place_order("ETH", "long", 5000)   # raises TradeBlocked if the trade scores DANGER
+```
+
+### Why an agent needs a gate in code
+
+An LLM picks a coin, a side and a size from text. It can't see that a cluster of leveraged positions would be liquidated by a small move past the mark price, that the top traders are already crowded on the same side, or that its order is too big for the book. A prompt that says "check risk first" is a suggestion the model can skip. RiskShield wraps the order function itself, so the check can't be skipped. A failed check (an unfunded wallet, an exhausted budget, an outage) **blocks** the trade by default rather than letting it through.
+
+What it checks, and what it doesn't: the score combines Hyperliquid liquidation clusters near the mark price, top-trader crowding on your side, the funding your side pays, and modelled slippage for your size. It is a heuristic and is not yet calibrated against outcomes. It does not manage open positions or set stops. → [Full RiskShield docs](#riskshield-block-dangerous-trades-before-they-execute) · [Fund the wallet first](#fund-your-agents-wallet-do-this-first)
+
+## What else is in the box
+
+The same client also ships pre-trade signal tools for **LangChain** and **CrewAI** agents, at about $0.01 per call:
 
 | Tool | Input | Returns |
 |---|---|---|
@@ -90,7 +113,9 @@ with ApexClient(private_key=os.environ["AGENT_WALLET_KEY"]) as apex:
 
 ## RiskShield: block dangerous trades before they execute
 
-A prompt can tell an agent to check risk first. RiskShield makes it impossible to skip: it wraps the function that places the order, so every trade is scored by `check_trade_safety` before it runs, and a trade in the DANGER band never reaches your exchange code.
+Nothing stops an LLM agent from opening a position right next to a liquidation cluster. A prompt can tell an agent to check risk first, but the model can skip a prompt. RiskShield can't be skipped: it wraps the function that places the order, so every trade is scored by `check_trade_safety` before it runs, and a trade in the DANGER band never reaches your exchange code. $0.014 per check, paid from the agent's own USDC wallet on Base ([fund it first](#fund-your-agents-wallet-do-this-first)). No API key.
+
+**Quickstart:** `pip install apexrunner-tools`, then:
 
 ```python
 import os
