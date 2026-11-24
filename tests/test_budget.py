@@ -97,7 +97,19 @@ def test_rejected_payment_reports_reason_and_counts(mock_apex, make_client):
         client.call("slippage_forecast", size_usd=1000, **SLIP)
     assert "insufficient_funds" in str(exc.value)
     assert client.address in str(exc.value)
+    assert "about $0.01 per call" in str(exc.value)
     assert client.budget.spent_usdc == pytest.approx(0.007)
+
+
+def test_rejected_payment_names_the_check_price_for_check_trade_safety(mock_apex, make_client):
+    """0.3.1: an unfunded RiskShield check said "about $0.01 per call"; it costs $0.014."""
+    mock_apex.paid_response = lambda p, q: (
+        402, {"error": "insufficient_funds"}, {"PAYMENT-REQUIRED": b64json(mock_apex.challenge)})
+    client = make_client(cache=False)
+    with pytest.raises(PaymentRejected) as exc:
+        client.call("check_trade_safety", coin="ETH", side="long", size_usd=500)
+    assert "about $0.014 per check" in str(exc.value)
+    assert "$0.01 per call" not in str(exc.value)
 
 
 def test_every_signature_is_charged_not_every_call(account):

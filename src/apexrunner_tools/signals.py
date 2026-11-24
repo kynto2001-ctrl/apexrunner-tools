@@ -25,6 +25,8 @@ class SignalSpec:
     slug: str
     input_model: type[BaseModel]
     description: str
+    # Shown in PaymentRejected so an unfunded wallet sees the price of THIS call.
+    price_hint: str = "about $0.01 per call"
 
     def to_query(self, args: BaseModel) -> dict[str, str]:
         out: dict[str, str] = {}
@@ -88,6 +90,7 @@ CHECK_TRADE_SAFETY = SignalSpec(
         "USDC on Base, paid automatically from the agent's wallet; repeating the same check while "
         "it is still fresh returns the cached result at no cost."
     ),
+    price_hint="about $0.014 per check",
 )
 
 SIGNALS: tuple[SignalSpec, ...] = (

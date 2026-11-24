@@ -65,7 +65,7 @@ You pay only for calls that succeed. A repeated identical call is served from ca
 
 ```
 BLOCKED: long ETH $500 could not be risk-checked: PaymentRejected: Payment was rejected.
-Check that wallet 0x54586281dFbcdF3e496B0A8dd58d3512B603b0B1 holds USDC on Base mainnet (about $0.01 per call).
+Check that wallet 0x54586281dFbcdF3e496B0A8dd58d3512B603b0B1 holds USDC on Base mainnet (about $0.014 per check).
 ```
 
 Here `e.decision.error` is set and `e.decision.score` is `None`. That combination means the check never ran. A real DANGER result has a score.

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "apexrunner-tools"
-version = "0.3.0"
+version = "0.3.1"
 description = "LangChain and CrewAI tools for APEX Runner pre-trade crypto signals (risk, execution timing, slippage, trade safety) and RiskShield, a fail-closed pre-trade gate, paid per call over x402 in USDC on Base."
 readme = "README.md"
 license = "MIT"

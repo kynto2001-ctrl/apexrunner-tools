@@ -1,6 +1,6 @@
 """Pinned values. The payment policy refuses any payment request that differs."""
 
-__version__ = "0.3.0"
+__version__ = "0.3.1"
 
 APEX_BASE_URL = "https://apexrunner.ai/signals"
 

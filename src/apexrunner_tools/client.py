@@ -230,7 +230,7 @@ class ApexClient:
             reason = _payment_error_reason(headers)
             raise PaymentRejected(
                 f"Payment was rejected{f' ({reason})' if reason else ''}. Check that wallet "
-                f"{self.address} holds USDC on Base mainnet (about $0.01 per call)."
+                f"{self.address} holds USDC on Base mainnet ({spec.price_hint})."
             )
         if not 200 <= status < 300:
             body = content[:300].decode("utf-8", "replace")
